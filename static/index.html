@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>面试复盘教练</title>
+<link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">🎙️</span>
+    <div>
+      <div class="title">面试复盘教练</div>
+      <div class="subtitle">上传录音，AI 给你一份严格的复盘报告</div>
+    </div>
+  </div>
+  <div class="userbox">
+    <span id="userName" class="chip">加载中…</span>
+    <span id="asrChip" class="chip warn hidden">未配置 ASR</span>
+    <span id="aiChip" class="chip warn hidden">未配置 AI</span>
+    <span id="dbChip" class="chip warn hidden">未配置 DB</span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="list">📚 档案库</button>
+  <button class="tab" data-tab="new">➕ 新建复盘</button>
+  <button class="tab" data-tab="trend">📈 成长趋势</button>
+</nav>
+
+<main>
+
+  <!-- 档案库 -->
+  <section id="tab-list" class="tab-panel active">
+    <div class="listbar">
+      <div class="hint">全部复盘记录（进行中的任务会自动刷新）</div>
+      <button class="btn ghost" id="refreshList">🔄 刷新</button>
+    </div>
+    <div id="cardList" class="cards"></div>
+    <div id="listEmpty" class="empty hidden">
+      还没有任何记录。点上方「新建复盘」上传第一场面试录音。
+    </div>
+  </section>
+
+  <!-- 新建复盘 -->
+  <section id="tab-new" class="tab-panel">
+    <form id="newForm" class="card form">
+      <h2>新建复盘</h2>
+
+      <div class="grid2">
+        <label>公司 <input name="company" placeholder="例：小红书" /></label>
+        <label>岗位 <input name="role_title" placeholder="例：产品经理" /></label>
+        <label>轮次 <input name="round_name" placeholder="例：终面 / HRBP" /></label>
+        <label>面试日期 <input type="date" name="interview_date" /></label>
+      </div>
+
+      <div class="mode-picker">
+        <button type="button" class="mode active" data-mode="upload">🎧 上传录音文件</button>
+        <button type="button" class="mode" data-mode="record">🎙️ 现场实时录音</button>
+        <button type="button" class="mode" data-mode="paste">📝 直接粘贴文字</button>
+      </div>
+
+      <!-- 模式 1：上传录音 -->
+      <div class="mode-panel" data-panel="upload">
+        <div class="dropzone" id="dropzone">
+          <div class="dz-hint">
+            <div class="dz-icon">🎧</div>
+            <div class="dz-title">拖拽录音文件到这里，或点击选择</div>
+            <div class="dz-sub" id="dzSub">支持 mp3 / m4a / wav / webm，单文件 ≤ <span id="maxMB">25</span>MB</div>
+          </div>
+          <input type="file" id="audioFile" accept="audio/*" hidden />
+        </div>
+        <div id="uploadPreview" class="preview hidden"></div>
+      </div>
+
+      <!-- 模式 2：现场实时录音（浏览器 MediaRecorder，录完自动上传给服务端 ASR） -->
+      <div class="mode-panel hidden" data-panel="record">
+        <div class="record-box">
+          <div class="record-status" id="recStatus">未开始</div>
+          <div class="record-time" id="recTime">00:00</div>
+          <div class="record-actions">
+            <button type="button" class="btn primary" id="btnRecStart">● 开始录音</button>
+            <button type="button" class="btn" id="btnRecStop" disabled>■ 停止</button>
+            <button type="button" class="btn ghost" id="btnRecReset" disabled>清除</button>
+          </div>
+          <div id="recPreview" class="preview hidden"></div>
+          <p class="tip">录完点「提交复盘」，服务端会自动转写并分析。面试当场把浏览器留在这一页即可。</p>
+        </div>
+      </div>
+
+      <!-- 模式 3：粘贴文字 -->
+      <div class="mode-panel hidden" data-panel="paste">
+        <textarea id="transcriptInput" rows="14" placeholder="把已经转好的面试对话粘贴到这里…&#10;不区分说话人也可以，AI 会自己判断。"></textarea>
+        <p class="tip">最稳的路径：手机备忘录 / 会议软件的转写导出直接粘过来。至少 50 字。</p>
+      </div>
+
+      <div class="form-footer">
+        <button type="submit" class="btn primary" id="submitBtn">🚀 提交复盘</button>
+        <span id="submitTip" class="tip"></span>
+      </div>
+    </form>
+  </section>
+
+  <!-- 成长趋势 -->
+  <section id="tab-trend" class="tab-panel">
+    <div class="card">
+      <h2>综合分曲线</h2>
+      <div id="trendChart" class="chart"></div>
+      <div id="trendEmpty" class="empty hidden">还没有已完成的记录。</div>
+    </div>
+    <div class="grid2 gap">
+      <div class="card">
+        <h2>各类问题平均分</h2>
+        <div id="catList"></div>
+      </div>
+      <div class="card">
+        <h2>反复答不好的题</h2>
+        <div id="weakList"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- 报告详情抽屉 -->
+<aside id="drawer" class="drawer hidden">
+  <div class="drawer-mask" data-close></div>
+  <div class="drawer-body">
+    <button class="drawer-close" data-close>×</button>
+    <div id="drawerContent"></div>
+  </div>
+</aside>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
